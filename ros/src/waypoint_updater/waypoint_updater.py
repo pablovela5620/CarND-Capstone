@@ -48,6 +48,12 @@ class WaypointUpdater(object):
     def loop(self):
         pass
 
+    def get_closest_waypoint_idx(self):
+        pass
+
+    def publish_waypoints(self, closest_idx):
+        pass
+
     def pose_cb(self, msg):
         # TODO: Implement
         pass
