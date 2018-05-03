@@ -151,14 +151,15 @@ class TLDetector(object):
             car_position_idx = self.get_closest_waypoint(
                 self.pose.pose.position.x, self.pose.pose.position.y)
 
-        # TODO find the closest visible traffic light (if one exists)
+        # No need to use KDTree since so few traffic lights ~8
         diff = len(self.waypoints.waypoints)
         for i, light in enumerate(self.lights):
-            # Get stop line waypoint index
+            # Get stop line waypoint index from the predetermined ymal file
             line = stop_line_positions[i]
             temp_wp_idx = self.get_closest_waypoint(line[0], line[1])
-            # Find closest stop line waypoint index
+            # Find closest stop line waypoint index, aka find the smallest value of diff
             d = temp_wp_idx - car_position_idx
+            # if infront of car d>=0 and smaller then current d
             if d >= 0 and d < diff:
                 diff = d
                 closest_light = light
@@ -168,6 +169,7 @@ class TLDetector(object):
             state = self.get_light_state(closest_light)
             return line_wp_idx, state
 
+        # If the traffic light state can't be determined
         return -1, TrafficLight.UNKNOWN
 
 
