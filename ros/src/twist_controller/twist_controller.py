@@ -11,21 +11,24 @@ class Controller(object):
     def __init__(self, vehicle_mass, fuel_capacity, brake_deadband, decel_limit,
                  accel_limit, wheel_radius, wheel_base, steer_ratio, max_lat_accel, max_steer_angle):
 
-        # TODO: Implement
+        # Yaw controller for steering
         self.yaw_controller = YawController(
             wheel_base, steer_ratio, 0.1, max_lat_accel, max_steer_angle)
 
+        # PID controller initialization variables, determined through trial and error
         kp = 0.3
         ki = 0.1
         kd = 0.0
         mn = 0.0  # Minimum Throttle
-        mx = 0.2  # Maximum Throttle
+        mx = 0.7  # Maximum Throttle
         self.throttle_controller = PID(kp, ki, kd, mn, mx)
 
-        tau = 0.5
-        ts = 0.02
+        # Low pass filter used to remove some of the higher frequency noice
+        tau = 0.5  # Cut off frequency (1/(2pi*tau))
+        ts = 0.02  # Sample Time
         self.vel_lpf = LowPassFilter(tau, ts)
 
+        # Other variables, not all are used
         self.vehicle_mass = vehicle_mass
         self.fuel_capacity = fuel_capacity
         self.brake_deadband = brake_deadband
@@ -38,9 +41,11 @@ class Controller(object):
     def control(self, current_vel, dbw_enabled, linear_vel, angular_vel):
         # Return throttle, brake, steer
         if not dbw_enabled:
+            # Ensure that error build up doesn't cause crazy movement in car
+            # if dbw is not enabled
             self.throttle_controller.reset()
             return 0.0, 0.0, 0.0
-
+        # Using low pass filter to remove noise
         current_vel = self.vel_lpf.filt(current_vel)
 
         steering = self.yaw_controller.get_steering(linear_vel, angular_vel, current_vel)
@@ -53,15 +58,16 @@ class Controller(object):
         self.last_time = current_time
 
         throttle = self.throttle_controller.step(vel_error, sample_time)
-        brake = 0
+        brake = 0.0
 
+        # Braking Logic
         if linear_vel == 0 and vel_error < 0.1:
-            throttle = 0
+            throttle = 0.0
             brake = 400  # N*m - to hold the car in place if we are stopped at a light. Acceleration ~ 1m/s^2
 
         elif throttle < 0.1 and vel_error < 0:
-            throttle = 0
+            throttle = 0.0
             decel = max(vel_error, self.decel_limit)
-            brake = abs(decel) * self.vehicle_mass * self.wheel_radius  # Torque N*m
+            brake = abs(decel) * self.vehicle_mass * self.wheel_radius  # Torque
 
         return throttle, brake, steering
